@@ -37,8 +37,8 @@ Next, create a router, register routes, and compile a Ring handler:
 
 ## Documentation
 
-- **[ARCH.md](./docs_en/ARCH.md):** For a high-level overview of the modular architecture this component is designed for.
-- **[ROUTER.md](./docs_en/ROUTER.md):** For a detailed API reference, usage examples, and testing guidelines.
+- **[ARCH.md](./docs/ARCH.md):** For a high-level overview of the modular architecture this component is designed for.
+- **[ROUTER.md](./docs/ROUTER.md):** For a detailed API reference, usage examples, and testing guidelines.
 
 ## License
 

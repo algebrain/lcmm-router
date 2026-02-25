@@ -40,7 +40,7 @@
                           (range routes-per-thread))))
            (mapv #(doto (Thread. ^Runnable %) (.start)))
            (run! #(.join ^Thread %)))
-      
+
       (let [handler (router/as-ring-handler rtr)
             total-routes (* num-threads routes-per-thread)]
         (is (= total-routes (count (-> rtr :routes-atom deref))))
