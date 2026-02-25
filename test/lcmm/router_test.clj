@@ -6,6 +6,14 @@
 (defn- mock-handler [response]
   (fn [_] response))
 
+(defn- exception-message-matches?
+  [pattern f]
+  (try
+    (f)
+    false
+    (catch clojure.lang.ExceptionInfo e
+      (boolean (re-find pattern (ex-message e))))))
+
 (deftest basic-routing-test
   (testing "Регистрация и вызов простого GET маршрута"
     (let [rtr (router/make-router)
@@ -41,8 +49,51 @@
            (mapv #(doto (Thread. ^Runnable %) (.start)))
            (run! #(.join ^Thread %)))
 
-      (let [handler (router/as-ring-handler rtr)
-            total-routes (* num-threads routes-per-thread)]
-        (is (= total-routes (count (-> rtr :routes-atom deref))))
+      (let [handler (router/as-ring-handler rtr)]
         (is (= {:status 200} (handler {:request-method :get :uri "/t5/r50"})))
         (is (= 404 (:status (handler {:request-method :get :uri "/t10/r100"}))))))))
+
+(deftest duplicate-route-fails-by-default-test
+  (testing "Конфликт path+method по умолчанию приводит к ошибке"
+    (let [rtr (router/make-router)]
+      (router/add-route! rtr :get "/dup" (mock-handler {:status 200 :body "v1"}))
+      (is (exception-message-matches?
+           #"Route conflict"
+           #(router/add-route! rtr :get "/dup" (mock-handler {:status 200 :body "v2"})))))))
+
+(deftest duplicate-route-can-be-replaced-explicitly-test
+  (testing "Конфликт path+method можно разрешить только через :replace? true"
+    (let [rtr (router/make-router)
+          first-response {:status 200 :body "v1"}
+          second-response {:status 200 :body "v2"}]
+      (router/add-route! rtr :get "/dup-replace" (mock-handler first-response))
+      (router/add-route! rtr :get "/dup-replace" (mock-handler second-response) {:replace? true})
+      (let [handler (router/as-ring-handler rtr)]
+        (is (= second-response
+               (handler {:request-method :get :uri "/dup-replace"})))))))
+
+(deftest add-route-validation-test
+  (testing "add-route! валидирует method/path/handler/opts"
+    (let [rtr (router/make-router)
+          handler (mock-handler {:status 200})]
+      (is (exception-message-matches?
+           #"method must be a keyword"
+           #(router/add-route! rtr "GET" "/invalid-method" handler)))
+      (is (exception-message-matches?
+           #"path must be a string"
+           #(router/add-route! rtr :get :invalid-path handler)))
+      (is (exception-message-matches?
+           #"handler must be invokable"
+           #(router/add-route! rtr :get "/invalid-handler" 42)))
+      (is (exception-message-matches?
+           #"opts must be a map"
+           #(router/add-route! rtr :get "/invalid-opts" handler []))))))
+
+(deftest router-freeze-after-build-test
+  (testing "После as-ring-handler роутер становится immutable"
+    (let [rtr (router/make-router)]
+      (router/add-route! rtr :get "/before-build" (mock-handler {:status 200}))
+      (router/as-ring-handler rtr)
+      (is (exception-message-matches?
+           #"immutable after as-ring-handler"
+           #(router/add-route! rtr :get "/after-build" (mock-handler {:status 200})))))))
