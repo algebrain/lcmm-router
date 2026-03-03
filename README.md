@@ -1,7 +1,5 @@
 # LCMM Router
 
-[![Clojars Project](https://img.shields.io/clojars/v/lcmm/router.svg)](https://clojars.org/lcmm/router)
-
 `lcmm/router` is a lightweight, centralized routing component for Clojure applications, designed to support a loosely coupled, modular monolith architecture. It implements an Inversion of Control (IoC) pattern, allowing independent modules to register their own HTTP routes on a shared router instance.
 
 The core idea is that the application's entry point creates a single router instance and passes it to each module during initialization. The modules use the router to define their endpoints. Finally, the main application compiles all registered routes into a single [Ring-compliant](https://github.com/ring-clojure/ring) handler.
